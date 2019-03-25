@@ -4,17 +4,21 @@ import java.io.File
 import java.net.URL
 import java.nio.file.{Files, Path, Paths}
 
+import es.upm.fi.dia.oeg.mappingpedia.model.{Distribution, MappingDocument, UnannotatedDistribution}
+
+/*
 import be.ugent.mmlab.rml.config.RMLConfiguration
 import be.ugent.mmlab.rml.core.{StdMetadataRMLEngine, StdRMLEngine}
 import be.ugent.mmlab.rml.mapdochandler.extraction.std.StdRMLMappingFactory
 import be.ugent.mmlab.rml.mapdochandler.retrieval.RMLDocRetrieval
-import es.upm.fi.dia.oeg.mappingpedia.controller.MappingExecutionController.logger
+*/
+
 import es.upm.fi.dia.oeg.mappingpedia.model.MappingExecution
-//import es.upm.fi.dia.oeg.mappingpedia.MappingPediaEngine.{retrieveParameters}
 import org.apache.commons.cli.CommandLine
 import org.apache.commons.io.{FileUtils, FilenameUtils}
 import org.apache.log4j.BasicConfigurator
 import org.eclipse.rdf4j.rio.RDFFormat
+
 
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -61,17 +65,24 @@ object RMLMapperConnector {
 class RMLMapperConnector() {
   val logger: Logger = LoggerFactory.getLogger(this.getClass);
 
-  def executeWithMain(mappingExecution: MappingExecution) = {
+  def executeWithMain(mappingExecution: MappingExecution): Unit = {
     //TODO FIX THIS RML Engine only supports one distribution file
     val distribution = mappingExecution.unannotatedDistributions.iterator.next();
     val distributionDownloadURL = distribution.dcatDownloadURL;
-    logger.info(s"distributionDownloadURL = $distributionDownloadURL");
-
-    val mappingDocumentDownloadURL = mappingExecution.mappingDocument.getDownloadURL();
-    logger.info(s"mappingDocumentDownloadURL= $mappingDocumentDownloadURL");
+    val mappingDocument = mappingExecution.mappingDocument;
+    val mappingDocumentDownloadURL = mappingDocument.getDownloadURL();
 
     val outputFilepath = if(mappingExecution.outputDirectory == null) { mappingExecution.getOutputFileWithExtension; }
     else { s"${mappingExecution.outputDirectory}/${mappingExecution.getOutputFileWithExtension}"}
+    logger.info(s"outputFilepath = $outputFilepath");
+
+    this.executeWithMain(distributionDownloadURL, mappingDocumentDownloadURL, outputFilepath);
+  }
+
+  def executeWithMain(distributionDownloadURL: String, mappingDocumentDownloadURL: String,
+                     outputFilepath:String): Unit = {
+    logger.info(s"distributionDownloadURL = $distributionDownloadURL");
+    logger.info(s"mappingDocumentDownloadURL= $mappingDocumentDownloadURL");
     logger.info(s"outputFilepath = $outputFilepath");
 
     val url = new URL(distributionDownloadURL);
@@ -83,17 +94,21 @@ class RMLMapperConnector() {
 
     val args: Array[String] = Array("-m", mappingDocumentDownloadURL, "-o", outputFilepath);
     try {
+      logger.info("Running RMLMapper ...")
       be.ugent.mmlab.rml.main.Main.main(args);
-    }
-    catch {
-      case e:Exception => { e.printStackTrace()}
+      //be.ugent.rml.cli.Main.main(args);
+
+    } catch {
+      case e: Exception => {
+        e.printStackTrace()
+      }
     }
     finally {
       datasetFile.delete()
     }
   }
 
-
+/*
   def execute(datasetDistributionURL: String, mappingURL:String, outputFilepath:String) = {
     val url = new URL(datasetDistributionURL);
     val datasetFile = new File(FilenameUtils.getName(url.getPath()));
@@ -187,8 +202,7 @@ class RMLMapperConnector() {
       datasetFile.delete()
       outputFile.delete();
     }
-
-
   }
+  */
 
 }
